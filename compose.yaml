@@ -1,0 +1,17 @@
+services:
+  hfdl-dashboard:
+    build: .
+    container_name: hfdl-dashboard
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+      - "5557:5557/udp"
+    volumes:
+      - ./data:/data
+    environment:
+      TZ: Australia/Sydney
+      DATABASE_PATH: /data/hfdl.sqlite3
+      UDP_PORT: "5557"
+      WEB_PORT: "8090"
+      DASHBOARD_USERNAME: ""
+      DASHBOARD_PASSWORD: ""
