@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['windows_launcher.py'],
+    ['windows_launcher_pc_hfdl.py'],
     pathex=[],
     binaries=[],
     datas=[('hfdl-dashboard.ico', '.'), ('hfdl-dashboard.png', '.')],
