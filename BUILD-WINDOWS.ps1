@@ -40,7 +40,7 @@ $serverArgs += "app.py"
 Write-Host "Building HFDLDashboardServer.exe..."
 & ".\.venv\Scripts\pyinstaller.exe" @serverArgs
 
-Write-Host "Building HFDLDashboard.exe..."
+Write-Host "Building HFDLDashboard.exe with PC-HFDL log input..."
 & ".\.venv\Scripts\pyinstaller.exe" `
     --noconfirm `
     --clean `
@@ -51,7 +51,7 @@ Write-Host "Building HFDLDashboard.exe..."
     --add-data "hfdl-dashboard.ico;." `
     --add-data "hfdl-dashboard.png;." `
     --hidden-import "pystray._win32" `
-    "windows_launcher.py"
+    "windows_launcher_pc_hfdl.py"
 
 $release = ".\dist\HFDL-Dashboard-Windows-v10.6-RC"
 Remove-Item -Recurse -Force $release -ErrorAction SilentlyContinue
@@ -73,7 +73,6 @@ Write-Host "Build complete:"
 Write-Host "  $release"
 Write-Host "  .\dist\HFDL-Dashboard-Windows-v10.6-RC.zip"
 
-
 Write-Host ""
 Write-Host "Looking for Inno Setup..."
 $innoCandidates = @(
@@ -87,9 +86,9 @@ $iscc = $innoCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if ($iscc) {
     Write-Host "Building Windows installer with Inno Setup..."
     & $iscc ".\HFDL-Dashboard-Installer.iss"
-if ($LASTEXITCODE -ne 0) {
-    throw "Inno Setup compilation failed with exit code $LASTEXITCODE."
-}
+    if ($LASTEXITCODE -ne 0) {
+        throw "Inno Setup compilation failed with exit code $LASTEXITCODE."
+    }
     Write-Host ""
     Write-Host "Installer created successfully under:"
     Write-Host "  .\installer-output"
