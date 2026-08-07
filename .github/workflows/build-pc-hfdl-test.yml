@@ -1,0 +1,63 @@
+name: Build PC-HFDL Windows Test
+
+on:
+  push:
+    branches:
+      - agent/pc-hfdl-launcher-input
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        shell: powershell
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-windows-build.txt
+
+      - name: Build dashboard server
+        shell: powershell
+        run: |
+          pyinstaller --noconfirm --clean --onefile --name HFDLDashboardServer --icon hfdl-dashboard.ico --collect-all uvicorn --collect-all fastapi app.py
+
+      - name: Build PC-HFDL enabled launcher
+        shell: powershell
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed --name HFDLDashboard --icon hfdl-dashboard.ico --add-data "hfdl-dashboard.ico;." --add-data "hfdl-dashboard.png;." --hidden-import pystray._win32 windows_launcher.py
+
+      - name: Create Herve test package
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Path test-package | Out-Null
+          Copy-Item dist\HFDLDashboard.exe test-package\
+          Copy-Item dist\HFDLDashboardServer.exe test-package\
+          @'
+          HFDL Dashboard - PC-HFDL Test Build
+
+          1. Keep PC-HFDL running normally with logging enabled.
+          2. Run HFDLDashboard.exe.
+          3. In PC-HFDL Log Input, enable the input.
+          4. Browse to the folder where PC-HFDL writes its .txt log files.
+          5. Start the dashboard and PC-HFDL input.
+          6. Confirm the input status shows Watching and the message counter increases.
+          7. Confirm aircraft, positions, ICAO/callsigns and ground stations appear correctly.
+          8. If anything fails, send a screenshot, the relevant PC-HFDL logfile and the dashboard server log.
+
+          This is a test build. Do not use for navigation or flight safety.
+          '@ | Set-Content -Encoding UTF8 test-package\HERVE-TEST-INSTRUCTIONS.txt
+
+      - name: Upload Windows test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: HFDL-PC-HFDL-Herve-Test
+          path: test-package
+          retention-days: 14
