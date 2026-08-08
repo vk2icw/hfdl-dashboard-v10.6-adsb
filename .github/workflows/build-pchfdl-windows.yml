@@ -27,6 +27,10 @@ jobs:
         shell: powershell
         run: .\BUILD-WINDOWS.ps1
 
+      - name: Test packaged server HTTPS
+        shell: powershell
+        run: .\smoke_test_packaged_server.ps1
+
       - name: Prepare Hervé test package
         shell: powershell
         run: |
