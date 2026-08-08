@@ -56,7 +56,6 @@ rep(
 )
 rep(
     "function markerIcon(){return L.divIcon({className:'',html:'<div class=\"marker\"></div>',iconSize:[16,16],iconAnchor:[8,8]})}",
-    "let selectedAircraft=null;\n"
     "function aircraftSource(a){return String(a?.msgtype||'').toUpperCase().startsWith('ADSB SBS')?'adsb':'hfdl'}\n"
     "function markerIcon(a,small=false,selected=false){\n"
     " const value=Number(a?.heading),hasHeading=Number.isFinite(value),heading=hasHeading?((value%360)+360)%360:0;\n"
@@ -81,6 +80,12 @@ rep(
 rep(
     "detailMarker=L.marker([last.lat,last.lon],{icon:markerIcon()}).addTo(detailMap).bindPopup(`<b>${a.callsign||a.icao}</b><br>${new Date(last.ts).toLocaleString()}`);",
     "detailMarker=L.marker([last.lat,last.lon],{icon:markerIcon(a,false,true)}).addTo(detailMap).bindPopup(`<b>${a.callsign||a.icao}</b><br>${a.heading==null?'Heading unavailable':'Track '+Math.round(Number(a.heading))+'°'}<br>${new Date(last.ts).toLocaleString()}`);",
+)
+
+# Make the browser connection indicator reflect the actual WebSocket state.
+rep(
+    " w.onopen=()=>w.send('ready');w.onmessage=e=>{let p=JSON.parse(e.data);if(p.event==='message')setTimeout(refresh,180);if(p.event==='alert')showAlert(p.data)};",
+    " w.onopen=()=>{document.getElementById('dot').className='dot good';document.getElementById('state').textContent='Connected';w.send('ready')};w.onmessage=e=>{let p=JSON.parse(e.data);if(p.event==='message')setTimeout(refresh,180);if(p.event==='alert')showAlert(p.data)};",
 )
 
 p.write_text(s, encoding='utf-8')
