@@ -13,6 +13,10 @@ Write-Host "Applying live aircraft timestamp and freshness rules..."
 & ".\.venv\Scripts\python.exe" ".\apply_time_display_rules.py"
 if ($LASTEXITCODE -ne 0) { throw "Timestamp/freshness patch failed." }
 
+Write-Host "Applying VRS-style local aircraft photo rules..."
+& ".\.venv\Scripts\python.exe" ".\apply_vrs_photo_rules.py"
+if ($LASTEXITCODE -ne 0) { throw "Local aircraft photo patch failed." }
+
 Remove-Item -Recurse -Force ".\build", ".\dist" -ErrorAction SilentlyContinue
 
 $legal = @(
