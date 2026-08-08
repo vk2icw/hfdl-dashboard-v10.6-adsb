@@ -9,6 +9,10 @@ if (-not (Test-Path ".venv")) {
 & ".\.venv\Scripts\python.exe" -m pip install --upgrade pip
 & ".\.venv\Scripts\python.exe" -m pip install -r requirements-windows-build.txt
 
+Write-Host "Applying live aircraft timestamp and freshness rules..."
+& ".\.venv\Scripts\python.exe" ".\apply_time_display_rules.py"
+if ($LASTEXITCODE -ne 0) { throw "Timestamp/freshness patch failed." }
+
 Remove-Item -Recurse -Force ".\build", ".\dist" -ErrorAction SilentlyContinue
 
 $legal = @(
