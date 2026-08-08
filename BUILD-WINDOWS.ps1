@@ -25,6 +25,10 @@ Write-Host "Applying aircraft database management page..."
 & ".\.venv\Scripts\python.exe" ".\apply_aircraft_database_page.py"
 if ($LASTEXITCODE -ne 0) { throw "Aircraft database page patch failed." }
 
+Write-Host "Applying rotatable aircraft map markers..."
+& ".\.venv\Scripts\python.exe" ".\apply_aircraft_marker_rules.py"
+if ($LASTEXITCODE -ne 0) { throw "Aircraft marker patch failed." }
+
 Remove-Item -Recurse -Force ".\build", ".\dist" -ErrorAction SilentlyContinue
 
 $legal = @(
