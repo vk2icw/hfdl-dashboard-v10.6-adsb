@@ -45,6 +45,10 @@ Write-Host "Preferring Airport-Data registration lookup with Mode-S fallback..."
 & ".\.venv\Scripts\python.exe" ".\apply_airport_data_registration_first.py"
 if ($LASTEXITCODE -ne 0) { throw "Airport-Data registration-first patch failed." }
 
+Write-Host "Applying registration photo fallback links..."
+& ".\.venv\Scripts\python.exe" ".\apply_registration_photo_fallback.py"
+if ($LASTEXITCODE -ne 0) { throw "Registration photo fallback patch failed." }
+
 Write-Host "Improving aircraft photo display quality..."
 & ".\.venv\Scripts\python.exe" ".\apply_photo_display_quality.py"
 if ($LASTEXITCODE -ne 0) { throw "Aircraft photo display quality patch failed." }
