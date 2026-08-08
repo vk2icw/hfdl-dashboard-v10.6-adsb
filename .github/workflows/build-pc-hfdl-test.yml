@@ -1,9 +1,6 @@
-name: Build PC-HFDL Windows Test
+name: Build Combined Windows Test
 
 on:
-  push:
-    branches:
-      - agent/pc-hfdl-launcher-input
   workflow_dispatch:
 
 jobs:
@@ -24,40 +21,35 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-windows-build.txt
 
-      - name: Build dashboard server
+      - name: Build combined PC-HFDL + ADS-B dashboard
         shell: powershell
-        run: |
-          pyinstaller --noconfirm --clean --onefile --name HFDLDashboardServer --icon hfdl-dashboard.ico --collect-all uvicorn --collect-all fastapi app.py
+        run: .\BUILD-WINDOWS.ps1
 
-      - name: Build PC-HFDL enabled launcher
+      - name: Create combined test package
         shell: powershell
         run: |
-          pyinstaller --noconfirm --clean --onefile --windowed --name HFDLDashboard --icon hfdl-dashboard.ico --add-data "hfdl-dashboard.ico;." --add-data "hfdl-dashboard.png;." --hidden-import pystray._win32 windows_launcher.py
-
-      - name: Create Herve test package
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Path test-package | Out-Null
-          Copy-Item dist\HFDLDashboard.exe test-package\
-          Copy-Item dist\HFDLDashboardServer.exe test-package\
+          $src = ".\dist\HFDL-Dashboard-Windows-v10.6-RC"
+          $dst = ".\dist\HFDL-Dashboard-PC-HFDL-ADSB-Test"
+          Remove-Item -Recurse -Force $dst -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $dst | Out-Null
+          Copy-Item "$src\HFDLDashboard.exe" $dst
+          Copy-Item "$src\HFDLDashboardServer.exe" $dst
           @'
-          HFDL Dashboard - PC-HFDL Test Build
+          HFDL DASHBOARD - COMBINED PC-HFDL + ADS-B TEST BUILD
 
-          1. Keep PC-HFDL running normally with logging enabled.
-          2. Run HFDLDashboard.exe.
-          3. In PC-HFDL Log Input, enable the input.
-          4. Browse to the folder where PC-HFDL writes its .txt log files.
-          5. Start the dashboard and PC-HFDL input.
-          6. Confirm the input status shows Watching and the message counter increases.
-          7. Confirm aircraft, positions, ICAO/callsigns and ground stations appear correctly.
-          8. If anything fails, send a screenshot, the relevant PC-HFDL logfile and the dashboard server log.
+          The launcher must show both:
+          - PC-HFDL Log Input
+          - ADS-B SBS Input (default 127.0.0.1:30003)
 
-          This is a test build. Do not use for navigation or flight safety.
-          '@ | Set-Content -Encoding UTF8 test-package\HERVE-TEST-INSTRUCTIONS.txt
+          Start PC-HFDL with logging enabled, select its logfile folder, and start the PC-HFDL input.
+          Start the SDRuno ADS-B plugin and enable SBS output on port 30003, then start the ADS-B SBS input.
 
-      - name: Upload Windows test package
+          Experimental hobby software. Not for navigation or flight safety.
+          '@ | Set-Content -Encoding UTF8 "$dst\READ-ME-FIRST.txt"
+
+      - name: Upload combined Windows test package
         uses: actions/upload-artifact@v4
         with:
-          name: HFDL-PC-HFDL-Herve-Test
-          path: test-package
+          name: HFDL-Dashboard-PC-HFDL-ADSB-Test
+          path: dist/HFDL-Dashboard-PC-HFDL-ADSB-Test
           retention-days: 14
