@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import socket
 import threading
-import time
 from datetime import datetime, timezone
 
 
@@ -45,18 +44,39 @@ def _bool(parts: list[str], index: int) -> bool | None:
     return None
 
 
-def _sbs_datetime(date_value: str | None, time_value: str | None) -> str | None:
+def _local_timezone():
+    """Return the timezone currently configured on the Windows decoder PC."""
+    return datetime.now().astimezone().tzinfo
+
+
+def _sbs_datetime(date_value: str | None, time_value: str | None) -> tuple[str | None, str | None]:
+    """Parse an SBS/BaseStation timestamp as decoder-PC local time.
+
+    SBS MSG timestamps contain no timezone designator. SDRuno and the dashboard run
+    on the same Windows PC in our supported configuration, so the only defensible
+    interpretation for live timing is the Windows local timezone. The original
+    timezone-less value is retained separately for diagnostics, while comparisons
+    use an explicit UTC ISO timestamp.
+    """
     if not date_value or not time_value:
-        return None
+        return None, None
+
     raw = f"{date_value} {time_value}"
     for fmt in ("%Y/%m/%d %H:%M:%S.%f", "%Y/%m/%d %H:%M:%S"):
         try:
-            # SBS/BaseStation does not carry a timezone marker. Keep the source
-            # value explicit rather than silently asserting a timezone.
-            return datetime.strptime(raw, fmt).isoformat(timespec="milliseconds")
+            naive = datetime.strptime(raw, fmt)
+            local_dt = naive.replace(tzinfo=_local_timezone())
+            utc_dt = local_dt.astimezone(timezone.utc)
+            return (
+                utc_dt.isoformat(timespec="milliseconds"),
+                local_dt.isoformat(timespec="milliseconds"),
+            )
         except ValueError:
             pass
-    return raw
+
+    # Unknown timestamp format: preserve the source text, but do not pretend it is
+    # timezone-normalised. This prevents invalid stale-message calculations.
+    return None, raw
 
 
 def parse_sbs_line(line: str) -> dict | None:
@@ -75,8 +95,10 @@ def parse_sbs_line(line: str) -> dict | None:
     transmission_type = _int(parts, 1)
     icao = (_text(parts, 4) or "").upper() or None
     callsign = (_text(parts, 10) or "").upper() or None
-    generated_at = _sbs_datetime(_text(parts, 6), _text(parts, 7))
-    logged_at = _sbs_datetime(_text(parts, 8), _text(parts, 9))
+
+    generated_utc, generated_local = _sbs_datetime(_text(parts, 6), _text(parts, 7))
+    logged_utc, logged_local = _sbs_datetime(_text(parts, 8), _text(parts, 9))
+    received_utc = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
     record = {
         "source_protocol": "adsb-sbs",
@@ -99,10 +121,16 @@ def parse_sbs_line(line: str) -> dict | None:
         "emergency": _bool(parts, 19),
         "spi": _bool(parts, 20),
         "on_ground": _bool(parts, 21),
-        "source_generated_at": generated_at,
-        "source_logged_at": logged_at,
-        "timestamp": logged_at or generated_at,
-        "received_at": datetime.now(timezone.utc).isoformat(),
+        # UTC values are the canonical timestamps used for comparisons.
+        "source_generated_at": generated_utc,
+        "source_logged_at": logged_utc,
+        "timestamp": logged_utc or generated_utc,
+        "received_at": received_utc,
+        # Preserve decoder-local values so the UI/debug logs can show exactly what
+        # SDRuno/BaseStation emitted after timezone interpretation.
+        "source_generated_local": generated_local,
+        "source_logged_local": logged_local,
+        "source_timezone_basis": "decoder-pc-local",
         "raw_text": raw,
     }
     return {key: value for key, value in record.items() if value is not None}
