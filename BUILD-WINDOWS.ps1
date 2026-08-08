@@ -49,6 +49,10 @@ Write-Host "Improving aircraft photo display quality..."
 & ".\.venv\Scripts\python.exe" ".\apply_photo_display_quality.py"
 if ($LASTEXITCODE -ne 0) { throw "Aircraft photo display quality patch failed." }
 
+Write-Host "Improving Leaflet map tile loading..."
+& ".\.venv\Scripts\python.exe" ".\apply_fast_map_tiles.py"
+if ($LASTEXITCODE -ne 0) { throw "Map tile performance patch failed." }
+
 Write-Host "Running live Airport-Data photo smoke test..."
 & ".\.venv\Scripts\python.exe" ".\smoke_test_airport_data.py"
 if ($LASTEXITCODE -ne 0) { throw "Airport-Data live photo smoke test failed." }
