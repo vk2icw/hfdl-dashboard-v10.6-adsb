@@ -5,7 +5,15 @@ if (-not (Test-Path $exe)) { throw "Packaged server executable not found: $exe" 
 $tempRoot = Join-Path $env:RUNNER_TEMP ("hfdl-packaged-smoke-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 $db = Join-Path $tempRoot "smoke.sqlite3"
-$log = Join-Path $tempRoot "server.log"
+$stdoutLog = Join-Path $tempRoot "server.stdout.log"
+$stderrLog = Join-Path $tempRoot "server.stderr.log"
+
+function Get-ServerLog {
+    $parts = @()
+    if (Test-Path $stdoutLog) { $parts += "--- stdout ---`n$(Get-Content $stdoutLog -Raw -ErrorAction SilentlyContinue)" }
+    if (Test-Path $stderrLog) { $parts += "--- stderr ---`n$(Get-Content $stderrLog -Raw -ErrorAction SilentlyContinue)" }
+    return ($parts -join "`n")
+}
 
 $old = @{}
 foreach ($name in @('DATABASE_PATH','UDP_BIND_IP','UDP_PORT','WEB_BIND_IP','WEB_PORT','DASHBOARD_USERNAME','DASHBOARD_PASSWORD')) {
@@ -22,18 +30,18 @@ $env:DASHBOARD_PASSWORD = ''
 
 $p = $null
 try {
-    $p = Start-Process -FilePath $exe -RedirectStandardOutput $log -RedirectStandardError $log -PassThru -WindowStyle Hidden
+    $p = Start-Process -FilePath $exe -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru -WindowStyle Hidden
     $health = 'http://127.0.0.1:8099/health'
     $ready = $false
     for ($i=0; $i -lt 40; $i++) {
-        if ($p.HasExited) { throw "Packaged server exited early with code $($p.ExitCode). Log:`n$(Get-Content $log -Raw -ErrorAction SilentlyContinue)" }
+        if ($p.HasExited) { throw "Packaged server exited early with code $($p.ExitCode). Log:`n$(Get-ServerLog)" }
         try {
             $r = Invoke-WebRequest -UseBasicParsing -Uri $health -TimeoutSec 1
             if ($r.StatusCode -eq 200) { $ready = $true; break }
         } catch { }
         Start-Sleep -Milliseconds 500
     }
-    if (-not $ready) { throw "Packaged server health check timed out. Log:`n$(Get-Content $log -Raw -ErrorAction SilentlyContinue)" }
+    if (-not $ready) { throw "Packaged server health check timed out. Log:`n$(Get-ServerLog)" }
 
     $photoUri = 'http://127.0.0.1:8099/api/external/airport-data-photo/7C6B39?refresh=true'
     $photoResponse = Invoke-WebRequest -UseBasicParsing -Uri $photoUri -TimeoutSec 20
