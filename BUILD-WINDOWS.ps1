@@ -9,6 +9,12 @@ if (-not (Test-Path ".venv")) {
 & ".\.venv\Scripts\python.exe" -m pip install --upgrade pip
 & ".\.venv\Scripts\python.exe" -m pip install -r requirements-windows-build.txt
 
+Write-Host "Applying aircraft photo UI build patch..."
+& ".\.venv\Scripts\python.exe" ".\build_photo_ui_patch.py"
+if ($LASTEXITCODE -ne 0) {
+    throw "Aircraft photo UI patch failed with exit code $LASTEXITCODE."
+}
+
 Remove-Item -Recurse -Force ".\build", ".\dist" -ErrorAction SilentlyContinue
 
 $legal = @(
@@ -35,7 +41,7 @@ $serverArgs = @(
 foreach ($file in $legal) {
     $serverArgs += @("--add-data", "$file;.")
 }
-$serverArgs += "app.py"
+$serverArgs += "build_app.py"
 
 Write-Host "Building HFDLDashboardServer.exe..."
 & ".\.venv\Scripts\pyinstaller.exe" @serverArgs
