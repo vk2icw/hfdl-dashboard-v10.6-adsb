@@ -41,6 +41,10 @@ Write-Host "Polishing Aircraft Detail layout and photo fallback..."
 & ".\.venv\Scripts\python.exe" ".\apply_aircraft_detail_polish.py"
 if ($LASTEXITCODE -ne 0) { throw "Aircraft Detail polish patch failed." }
 
+Write-Host "Preferring Airport-Data registration lookup with Mode-S fallback..."
+& ".\.venv\Scripts\python.exe" ".\apply_airport_data_registration_first.py"
+if ($LASTEXITCODE -ne 0) { throw "Airport-Data registration-first patch failed." }
+
 Write-Host "Validating embedded dashboard JavaScript..."
 & ".\.venv\Scripts\python.exe" ".\validate_embedded_js.py"
 if ($LASTEXITCODE -ne 0) { throw "Embedded JavaScript validation failed." }
