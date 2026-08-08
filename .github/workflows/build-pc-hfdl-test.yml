@@ -1,0 +1,55 @@
+name: Build Combined Windows Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        shell: powershell
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-windows-build.txt
+
+      - name: Build combined PC-HFDL + ADS-B dashboard
+        shell: powershell
+        run: .\BUILD-WINDOWS.ps1
+
+      - name: Create combined test package
+        shell: powershell
+        run: |
+          $src = ".\dist\HFDL-Dashboard-Windows-v10.6-RC"
+          $dst = ".\dist\HFDL-Dashboard-PC-HFDL-ADSB-Test"
+          Remove-Item -Recurse -Force $dst -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $dst | Out-Null
+          Copy-Item "$src\HFDLDashboard.exe" $dst
+          Copy-Item "$src\HFDLDashboardServer.exe" $dst
+          @'
+          HFDL DASHBOARD - COMBINED PC-HFDL + ADS-B TEST BUILD
+
+          The launcher must show both:
+          - PC-HFDL Log Input
+          - ADS-B SBS Input (default 127.0.0.1:30003)
+
+          Start PC-HFDL with logging enabled, select its logfile folder, and start the PC-HFDL input.
+          Start the SDRuno ADS-B plugin and enable SBS output on port 30003, then start the ADS-B SBS input.
+
+          Experimental hobby software. Not for navigation or flight safety.
+          '@ | Set-Content -Encoding UTF8 "$dst\READ-ME-FIRST.txt"
+
+      - name: Upload combined Windows test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: HFDL-Dashboard-PC-HFDL-ADSB-Test
+          path: dist/HFDL-Dashboard-PC-HFDL-ADSB-Test
+          retention-days: 14

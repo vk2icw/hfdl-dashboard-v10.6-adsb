@@ -9,6 +9,62 @@ if (-not (Test-Path ".venv")) {
 & ".\.venv\Scripts\python.exe" -m pip install --upgrade pip
 & ".\.venv\Scripts\python.exe" -m pip install -r requirements-windows-build.txt
 
+Write-Host "Applying live aircraft timestamp and freshness rules..."
+& ".\.venv\Scripts\python.exe" ".\apply_time_display_rules.py"
+if ($LASTEXITCODE -ne 0) { throw "Timestamp/freshness patch failed." }
+
+Write-Host "Applying VRS-style local aircraft photo rules..."
+& ".\.venv\Scripts\python.exe" ".\apply_vrs_photo_rules.py"
+if ($LASTEXITCODE -ne 0) { throw "Local aircraft photo patch failed." }
+
+Write-Host "Preparing aircraft database management patch..."
+& ".\.venv\Scripts\python.exe" ".\fix_aircraft_database_patch.py"
+if ($LASTEXITCODE -ne 0) { throw "Aircraft database patch preparation failed." }
+
+Write-Host "Applying aircraft database management page..."
+& ".\.venv\Scripts\python.exe" ".\apply_aircraft_database_page.py"
+if ($LASTEXITCODE -ne 0) { throw "Aircraft database page patch failed." }
+
+Write-Host "Applying rotatable aircraft map markers..."
+& ".\.venv\Scripts\python.exe" ".\apply_aircraft_marker_rules.py"
+if ($LASTEXITCODE -ne 0) { throw "Aircraft marker patch failed." }
+
+Write-Host "Applying live source, frequency expiry and ADS-B health rules..."
+& ".\.venv\Scripts\python.exe" ".\apply_live_source_rules.py"
+if ($LASTEXITCODE -ne 0) { throw "Live source/frequency patch failed." }
+
+Write-Host "Applying Airport-Data aircraft photo lookup..."
+& ".\.venv\Scripts\python.exe" ".\apply_airport_data_photo.py"
+if ($LASTEXITCODE -ne 0) { throw "Airport-Data photo patch failed." }
+
+Write-Host "Polishing Aircraft Detail layout and photo fallback..."
+& ".\.venv\Scripts\python.exe" ".\apply_aircraft_detail_polish.py"
+if ($LASTEXITCODE -ne 0) { throw "Aircraft Detail polish patch failed." }
+
+Write-Host "Preferring Airport-Data registration lookup with Mode-S fallback..."
+& ".\.venv\Scripts\python.exe" ".\apply_airport_data_registration_first.py"
+if ($LASTEXITCODE -ne 0) { throw "Airport-Data registration-first patch failed." }
+
+Write-Host "Applying registration photo fallback links..."
+& ".\.venv\Scripts\python.exe" ".\apply_registration_photo_fallback.py"
+if ($LASTEXITCODE -ne 0) { throw "Registration photo fallback patch failed." }
+
+Write-Host "Improving aircraft photo display quality..."
+& ".\.venv\Scripts\python.exe" ".\apply_photo_display_quality.py"
+if ($LASTEXITCODE -ne 0) { throw "Aircraft photo display quality patch failed." }
+
+Write-Host "Improving Leaflet map tile loading..."
+& ".\.venv\Scripts\python.exe" ".\apply_fast_map_tiles.py"
+if ($LASTEXITCODE -ne 0) { throw "Map tile performance patch failed." }
+
+Write-Host "Running live Airport-Data photo smoke test..."
+& ".\.venv\Scripts\python.exe" ".\smoke_test_airport_data.py"
+if ($LASTEXITCODE -ne 0) { throw "Airport-Data live photo smoke test failed." }
+
+Write-Host "Validating embedded dashboard JavaScript..."
+& ".\.venv\Scripts\python.exe" ".\validate_embedded_js.py"
+if ($LASTEXITCODE -ne 0) { throw "Embedded JavaScript validation failed." }
+
 Remove-Item -Recurse -Force ".\build", ".\dist" -ErrorAction SilentlyContinue
 
 $legal = @(
@@ -40,7 +96,7 @@ $serverArgs += "app.py"
 Write-Host "Building HFDLDashboardServer.exe..."
 & ".\.venv\Scripts\pyinstaller.exe" @serverArgs
 
-Write-Host "Building HFDLDashboard.exe..."
+Write-Host "Building HFDLDashboard.exe with PC-HFDL + ADS-B SBS input..."
 & ".\.venv\Scripts\pyinstaller.exe" `
     --noconfirm `
     --clean `
@@ -51,7 +107,7 @@ Write-Host "Building HFDLDashboard.exe..."
     --add-data "hfdl-dashboard.ico;." `
     --add-data "hfdl-dashboard.png;." `
     --hidden-import "pystray._win32" `
-    "windows_launcher.py"
+    "windows_launcher_pc_hfdl_adsb.py"
 
 $release = ".\dist\HFDL-Dashboard-Windows-v10.6-RC"
 Remove-Item -Recurse -Force $release -ErrorAction SilentlyContinue
@@ -73,7 +129,6 @@ Write-Host "Build complete:"
 Write-Host "  $release"
 Write-Host "  .\dist\HFDL-Dashboard-Windows-v10.6-RC.zip"
 
-
 Write-Host ""
 Write-Host "Looking for Inno Setup..."
 $innoCandidates = @(
@@ -87,9 +142,9 @@ $iscc = $innoCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if ($iscc) {
     Write-Host "Building Windows installer with Inno Setup..."
     & $iscc ".\HFDL-Dashboard-Installer.iss"
-if ($LASTEXITCODE -ne 0) {
-    throw "Inno Setup compilation failed with exit code $LASTEXITCODE."
-}
+    if ($LASTEXITCODE -ne 0) {
+        throw "Inno Setup compilation failed with exit code $LASTEXITCODE."
+    }
     Write-Host ""
     Write-Host "Installer created successfully under:"
     Write-Host "  .\installer-output"
