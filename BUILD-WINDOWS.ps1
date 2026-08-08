@@ -45,6 +45,10 @@ Write-Host "Preferring Airport-Data registration lookup with Mode-S fallback..."
 & ".\.venv\Scripts\python.exe" ".\apply_airport_data_registration_first.py"
 if ($LASTEXITCODE -ne 0) { throw "Airport-Data registration-first patch failed." }
 
+Write-Host "Running live Airport-Data photo smoke test..."
+& ".\.venv\Scripts\python.exe" ".\smoke_test_airport_data.py"
+if ($LASTEXITCODE -ne 0) { throw "Airport-Data live photo smoke test failed." }
+
 Write-Host "Validating embedded dashboard JavaScript..."
 & ".\.venv\Scripts\python.exe" ".\validate_embedded_js.py"
 if ($LASTEXITCODE -ne 0) { throw "Embedded JavaScript validation failed." }
