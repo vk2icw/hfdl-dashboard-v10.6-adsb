@@ -11,6 +11,19 @@ def rep(old: str, new: str) -> None:
     s = s.replace(old, new, 1)
 
 
+# Track the most recent ADS-B SBS datagram separately from the overall UDP feed.
+rep(
+    "clients:set[WebSocket]=set(); counters={'total':0,'invalid':0,'last':None}",
+    "clients:set[WebSocket]=set(); counters={'total':0,'invalid':0,'last':None,'adsb_last':None,'adsb_total':0}",
+)
+rep(
+    "            d=json.loads(data.decode()); m=parse(d); hits=save(m); asyncio.create_task(broadcast(m,hits))",
+    "            d=json.loads(data.decode())\n"
+    "            if str(d.get('source_protocol','')).lower()=='adsb-sbs':\n"
+    "                counters['adsb_last']=time.time(); counters['adsb_total']+=1\n"
+    "            m=parse(d); hits=save(m); asyncio.create_task(broadcast(m,hits))",
+)
+
 # Persist ADS-B track/heading. HFDL records normally leave this null.
 rep(
     "('display_eligible','INTEGER')]:",
@@ -82,12 +95,39 @@ rep(
     "detailMarker=L.marker([last.lat,last.lon],{icon:markerIcon(a,false,true)}).addTo(detailMap).bindPopup(`<b>${a.callsign||a.icao}</b><br>${a.heading==null?'Heading unavailable':'Track '+Math.round(Number(a.heading))+'°'}<br>${new Date(last.ts).toLocaleString()}`);",
 )
 
+# Two independent connector indicators in the top bar.
+rep(
+    ".status{display:flex;align-items:center;color:var(--muted);font-size:12px;white-space:nowrap}",
+    ".status{display:flex;align-items:center;gap:14px;color:var(--muted);font-size:12px;white-space:nowrap}.connector{display:flex;align-items:center;gap:6px}.connector .dot{margin-right:0}",
+)
+rep(
+    "    <div class=\"status\"><span id=\"dot\" class=\"dot\"></span><span id=\"state\">Connecting</span>&nbsp;·&nbsp;UDP 5557</div>",
+    "    <div class=\"status\"><span class=\"connector\"><span id=\"udp-dot\" class=\"dot\"></span><span id=\"udp-state\">UDP connecting</span></span><span class=\"connector\"><span id=\"adsb-dot\" class=\"dot\"></span><span id=\"adsb-state\">ADS-B waiting</span></span></div>",
+)
+rep(
+    " document.getElementById('dot').className='dot '+(silent?'warn':'on');\n document.getElementById('state').textContent=silent?'Feed silent':'Live'",
+    " let udpDot=document.getElementById('udp-dot'),udpState=document.getElementById('udp-state');\n"
+    " udpDot.className='dot '+(silent?'warn':'on');udpState.textContent=silent?'UDP listening · no recent traffic':'UDP live';\n"
+    " let adsbAge=latestHealth.adsb_last?Date.now()/1000-latestHealth.adsb_last:null,adsbDot=document.getElementById('adsb-dot'),adsbState=document.getElementById('adsb-state');\n"
+    " if(adsbAge!=null&&adsbAge<15){adsbDot.className='dot on';adsbState.textContent='ADS-B active'}\n"
+    " else if(latestHealth.adsb_total>0){adsbDot.className='dot warn';adsbState.textContent='ADS-B idle'}\n"
+    " else{adsbDot.className='dot warn';adsbState.textContent='ADS-B waiting'}",
+)
+rep(
+    " }catch(e){document.getElementById('state').textContent='Data error'}",
+    " }catch(e){document.getElementById('udp-dot').className='dot';document.getElementById('udp-state').textContent='UDP data error';document.getElementById('adsb-dot').className='dot';document.getElementById('adsb-state').textContent='ADS-B unknown'}",
+)
+
 # Make the browser connection indicator reflect the actual WebSocket state.
 rep(
     " w.onopen=()=>w.send('ready');w.onmessage=e=>{let p=JSON.parse(e.data);if(p.event==='message')setTimeout(refresh,180);if(p.event==='alert')showAlert(p.data)};",
-    " w.onopen=()=>{document.getElementById('dot').className='dot good';document.getElementById('state').textContent='Connected';w.send('ready')};w.onmessage=e=>{let p=JSON.parse(e.data);if(p.event==='message')setTimeout(refresh,180);if(p.event==='alert')showAlert(p.data)};",
+    " w.onopen=()=>{document.getElementById('udp-dot').className='dot on';document.getElementById('udp-state').textContent='UDP listening';w.send('ready')};w.onmessage=e=>{let p=JSON.parse(e.data);if(p.event==='message')setTimeout(refresh,180);if(p.event==='alert')showAlert(p.data)};",
+)
+rep(
+    " w.onclose=()=>{document.getElementById('dot').className='dot';document.getElementById('state').textContent='Reconnecting';setTimeout(ws,2000)}",
+    " w.onclose=()=>{document.getElementById('udp-dot').className='dot';document.getElementById('udp-state').textContent='UDP reconnecting';document.getElementById('adsb-dot').className='dot';document.getElementById('adsb-state').textContent='ADS-B unknown';setTimeout(ws,2000)}",
 )
 
 p.write_text(s, encoding='utf-8')
 compile(s, 'app.py', 'exec')
-print('Applied aircraft SVG marker and heading rules successfully.')
+print('Applied aircraft markers, heading rules and dual connector indicators successfully.')
