@@ -29,6 +29,10 @@ Write-Host "Applying rotatable aircraft map markers..."
 & ".\.venv\Scripts\python.exe" ".\apply_aircraft_marker_rules.py"
 if ($LASTEXITCODE -ne 0) { throw "Aircraft marker patch failed." }
 
+Write-Host "Applying live source, frequency expiry and ADS-B health rules..."
+& ".\.venv\Scripts\python.exe" ".\apply_live_source_rules.py"
+if ($LASTEXITCODE -ne 0) { throw "Live source/frequency patch failed." }
+
 Remove-Item -Recurse -Force ".\build", ".\dist" -ErrorAction SilentlyContinue
 
 $legal = @(
