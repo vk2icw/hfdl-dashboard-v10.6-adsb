@@ -17,6 +17,10 @@ Write-Host "Applying VRS-style local aircraft photo rules..."
 & ".\.venv\Scripts\python.exe" ".\apply_vrs_photo_rules.py"
 if ($LASTEXITCODE -ne 0) { throw "Local aircraft photo patch failed." }
 
+Write-Host "Preparing aircraft database management patch..."
+& ".\.venv\Scripts\python.exe" ".\fix_aircraft_database_patch.py"
+if ($LASTEXITCODE -ne 0) { throw "Aircraft database patch preparation failed." }
+
 Write-Host "Applying aircraft database management page..."
 & ".\.venv\Scripts\python.exe" ".\apply_aircraft_database_page.py"
 if ($LASTEXITCODE -ne 0) { throw "Aircraft database page patch failed." }
