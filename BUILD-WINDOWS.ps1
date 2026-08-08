@@ -40,7 +40,7 @@ $serverArgs += "app.py"
 Write-Host "Building HFDLDashboardServer.exe..."
 & ".\.venv\Scripts\pyinstaller.exe" @serverArgs
 
-Write-Host "Building HFDLDashboard.exe with PC-HFDL log input..."
+Write-Host "Building HFDLDashboard.exe with PC-HFDL + ADS-B SBS input..."
 & ".\.venv\Scripts\pyinstaller.exe" `
     --noconfirm `
     --clean `
@@ -51,7 +51,7 @@ Write-Host "Building HFDLDashboard.exe with PC-HFDL log input..."
     --add-data "hfdl-dashboard.ico;." `
     --add-data "hfdl-dashboard.png;." `
     --hidden-import "pystray._win32" `
-    "windows_launcher_pc_hfdl.py"
+    "windows_launcher_pc_hfdl_adsb.py"
 
 $release = ".\dist\HFDL-Dashboard-Windows-v10.6-RC"
 Remove-Item -Recurse -Force $release -ErrorAction SilentlyContinue
