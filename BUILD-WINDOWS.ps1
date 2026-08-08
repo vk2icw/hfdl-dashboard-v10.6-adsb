@@ -33,6 +33,10 @@ Write-Host "Applying live source, frequency expiry and ADS-B health rules..."
 & ".\.venv\Scripts\python.exe" ".\apply_live_source_rules.py"
 if ($LASTEXITCODE -ne 0) { throw "Live source/frequency patch failed." }
 
+Write-Host "Applying Airport-Data aircraft photo lookup..."
+& ".\.venv\Scripts\python.exe" ".\apply_airport_data_photo.py"
+if ($LASTEXITCODE -ne 0) { throw "Airport-Data photo patch failed." }
+
 Remove-Item -Recurse -Force ".\build", ".\dist" -ErrorAction SilentlyContinue
 
 $legal = @(
