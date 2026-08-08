@@ -37,6 +37,14 @@ Write-Host "Applying Airport-Data aircraft photo lookup..."
 & ".\.venv\Scripts\python.exe" ".\apply_airport_data_photo.py"
 if ($LASTEXITCODE -ne 0) { throw "Airport-Data photo patch failed." }
 
+Write-Host "Polishing Aircraft Detail layout and photo fallback..."
+& ".\.venv\Scripts\python.exe" ".\apply_aircraft_detail_polish.py"
+if ($LASTEXITCODE -ne 0) { throw "Aircraft Detail polish patch failed." }
+
+Write-Host "Validating embedded dashboard JavaScript..."
+& ".\.venv\Scripts\python.exe" ".\validate_embedded_js.py"
+if ($LASTEXITCODE -ne 0) { throw "Embedded JavaScript validation failed." }
+
 Remove-Item -Recurse -Force ".\build", ".\dist" -ErrorAction SilentlyContinue
 
 $legal = @(
